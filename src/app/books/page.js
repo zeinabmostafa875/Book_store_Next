@@ -4,11 +4,42 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-async function fetchAllBooks(page = 1) {
+// --- START: Search Bar Component ---
+function BookSearchBar({ onSearch }) {
+  const [input, setInput] = useState("");
+  return (
+    <form
+      className="flex mb-8 justify-center"
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSearch(input.trim());
+      }}
+    >
+      <input
+        type="text"
+        className="flex-1 max-w-md border rounded-l-full px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        placeholder="Search for books..."
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+      />
+      <button
+        type="submit"
+        className="bg-emerald-600 text-white px-6 py-2 rounded-r-full hover:bg-emerald-700 transition-colors"
+      >
+        Search
+      </button>
+    </form>
+  );
+}
+// --- END: Search Bar Component ---
+
+async function fetchAllBooks(page = 1, search = "programming") {
   try {
     const startIndex = (page - 1) * 12;
     const response = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=programming&startIndex=${startIndex}&maxResults=12`
+      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(
+        search
+      )}&startIndex=${startIndex}&maxResults=12`
     );
     if (!response.ok) {
       throw new Error("Failed to fetch books");
@@ -30,13 +61,15 @@ export default function BooksPage() {
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalBooks, setTotalBooks] = useState(0);
+  const [search, setSearch] = useState("programming");
 
   useEffect(() => {
     async function loadBooks() {
       try {
         setIsLoading(true);
         const { books: fetchedBooks, totalBooks: total } = await fetchAllBooks(
-          currentPage
+          currentPage,
+          search
         );
         setBooks(fetchedBooks);
         setTotalBooks(total);
@@ -48,13 +81,19 @@ export default function BooksPage() {
     }
 
     loadBooks();
-  }, [currentPage]);
+  }, [currentPage, search]);
 
   const totalPages = Math.ceil(totalBooks / 12);
 
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
+        <BookSearchBar
+          onSearch={(q) => {
+            setSearch(q || "programming");
+            setCurrentPage(1);
+          }}
+        />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(12)].map((_, index) => (
             <div
@@ -76,17 +115,25 @@ export default function BooksPage() {
 
   if (error) {
     return (
-      <div className="text-center py-8 bg-red-100 rounded-lg">
-        <h2 className="text-2xl text-red-600 mb-4">
-          Oops! Something went wrong
-        </h2>
-        <p className="text-red-500">{error.message}</p>
-        <button
-          onClick={() => window.location.reload()}
-          className="mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
-        >
-          Try Again
-        </button>
+      <div className="container mx-auto px-4 py-8">
+        <BookSearchBar
+          onSearch={(q) => {
+            setSearch(q || "programming");
+            setCurrentPage(1);
+          }}
+        />
+        <div className="text-center py-8 bg-red-100 rounded-lg">
+          <h2 className="text-2xl text-red-600 mb-4">
+            Oops! Something went wrong
+          </h2>
+          <p className="text-red-500">{error.message}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
@@ -96,6 +143,13 @@ export default function BooksPage() {
       <h1 className="text-4xl font-bold text-emerald-800 mb-8 text-center">
         Book Collection
       </h1>
+
+      <BookSearchBar
+        onSearch={(q) => {
+          setSearch(q || "programming");
+          setCurrentPage(1);
+        }}
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {books.map((book) => {
